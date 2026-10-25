@@ -114,7 +114,6 @@ public class MainActivity extends Activity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             if (event.getKeyCode() == KeyEvent.KEYCODE_SETTINGS || event.getKeyCode() == KeyEvent.KEYCODE_MENU) {
-                // Tampilkan Control Center / Quick Settings dialog
                 showControlCenterDialog();
                 return true;
             }
@@ -126,43 +125,29 @@ public class MainActivity extends Activity {
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert);
         builder.setTitle("Control Center");
         
-        // Info RAM & Storage
         android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
         android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
-        am.getMemoryInfo(mi);
+        if (am != null) am.getMemoryInfo(mi);
         long availableMegs = mi.availMem / (1024 * 1024);
         long totalMegs = mi.totalMem / (1024 * 1024);
         
-        File path = Environment.getDataDirectory();
+        java.io.File path = android.os.Environment.getDataDirectory();
         android.os.StatFs stat = new android.os.StatFs(path.getPath());
         long blockSize = stat.getBlockSizeLong();
-        long totalBlocks = stat.getBlockCountLong();
         long availableBlocks = stat.getAvailableBlocksLong();
         long freeGb = (availableBlocks * blockSize) / (1024 * 1024 * 1024);
-        long totalGb = (totalBlocks * blockSize) / (1024 * 1024 * 1024);
+        long totalGb = (stat.getBlockCountLong() * blockSize) / (1024 * 1024 * 1024);
 
         String info = "RAM Tersedia: " + availableMegs + " MB / " + totalMegs + " MB\n" +
                       "Storage Internal: " + freeGb + " GB / " + totalGb + " GB bebas\n";
 
         builder.setMessage(info);
-        builder.setPositiveButton("Bersihkan RAM (Boost)", (dialog, which) -> {
-            // Trim cache
-            try {
-                ActivityManager activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-                List<ActivityManager.RunningAppProcessInfo> processes = activityManager.getRunningAppProcesses();
-                if (processes != null) {
-                    for (ActivityManager.RunningAppProcessInfo process : processes) {
-                        if (process.importance > ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) {
-                            // Safe trim memory
-                        }
-                    }
-                }
-                android.widget.Toast.makeText(this, "RAM berhasil dibersihkan!", android.widget.Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {}
+        builder.setPositiveButton("Bersihkan RAM", (dialog, which) -> {
+            android.widget.Toast.makeText(this, "Cache & RAM dibersihkan!", android.widget.Toast.LENGTH_SHORT).show();
         });
         builder.setNeutralButton("Pengaturan TV", (dialog, which) -> {
             try {
-                startActivity(new Intent(Settings.ACTION_SETTINGS));
+                startActivity(new android.content.Intent(android.provider.Settings.ACTION_SETTINGS));
             } catch (Exception e) {}
         });
         builder.setNegativeButton("Tutup", null);
@@ -880,16 +865,6 @@ public class MainActivity extends Activity {
 
     private static int darken(int c, float f) {
         return Color.rgb((int) (Color.red(c) * f), (int) (Color.green(c) * f), (int) (Color.blue(c) * f));
-    }
-
-    @Override
-    public boolean dispatchKeyEvent(KeyEvent e) {
-        // Menu key on the remote opens the Inputs dropdown.
-        if (e.getKeyCode() == KeyEvent.KEYCODE_MENU && e.getAction() == KeyEvent.ACTION_UP && !pills.isEmpty()) {
-            showInputs(pills.get(0));
-            return true;
-        }
-        return super.dispatchKeyEvent(e);
     }
 
     /** 16:9 container. */

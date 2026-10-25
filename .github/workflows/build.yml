@@ -1,0 +1,38 @@
+name: Build Apple-TV-Glass Launcher APK
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Build APK
+        run: |
+          cd launcher
+          chmod +x build-and-install.sh || true
+          # Build release manually using android tools
+          SDK="/usr/local/lib/android/sdk"
+          export ANDROID_HOME=$SDK
+          BT="$SDK/build-tools/34.0.0"
+          JAR="$SDK/platforms/android-34/android.jar"
+          mkdir -p build/gen build/classes build/dex
+          "$BT/aapt2" compile --dir res -o build/res.zip
+          "$BT/aapt2" link -o build/base.apk -I "$JAR" --manifest AndroidManifest.xml --java build/gen -A assets --min-sdk-version 30 --target-sdk-version 30 build/res.zip
+          javac -nowarn -Xlint:-options --release 11 -classpath "$JAR" -d build/classes $(find src build/gen -name '*.java')
+          "$BT/d8" --min-api 30 --lib "$JAR" --output build/dex $(find build/classes -name '*.class')
+          cp build/base.apk build/unsigned.apk
+          (cd build/dex && zip -q -u ../unsigned.apk classes.dex)
+          "$BT/zipalign" -f 4 build/unsigned.apk build/aligned.apk
+          keytool -genkeypair -keystore debug.keystore -storepass android -keypass android -alias tvhome -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=tvhome" >/dev/null 2>&1
+          "$BT/apksigner" sign --ks debug.keystore --ks-pass pass:android --out build/tvhome.apk build/aligned.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-tv-glass-apk
+          path: launcher/build/build/tvhome.apk

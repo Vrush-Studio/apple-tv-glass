@@ -11,14 +11,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v2
       - name: Build APK
         run: |
           cd launcher
-          chmod +x build-and-install.sh || true
-          # Build release manually using android tools
-          SDK="/usr/local/lib/android/sdk"
-          export ANDROID_HOME=$SDK
+          SDK="$ANDROID_HOME"
           BT="$SDK/build-tools/34.0.0"
           JAR="$SDK/platforms/android-34/android.jar"
           mkdir -p build/gen build/classes build/dex
@@ -35,4 +32,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: apple-tv-glass-apk
-          path: launcher/build/build/tvhome.apk
+          path: launcher/build/tvhome.apk
